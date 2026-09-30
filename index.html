@@ -173,16 +173,16 @@ async function loadProducts_home() {
       更新: ${new Date(product.updated_at).toLocaleString()}<br>
 
       <div style="display:flex; justify-content:space-between; margin-top:6px;">
-        <button class="plus"
-          data-id="${product.id}"
-          data-stock="${product.stock}">
-          ＋
-        </button>
-
         <button class="minus"
           data-id="${product.id}"
           data-stock="${product.stock}">
           −
+        </button>
+
+        <button class="plus"
+          data-id="${product.id}"
+          data-stock="${product.stock}">
+          ＋
         </button>
       </div>
     `;
