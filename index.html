@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>在庫管理</title>
+<title>家庭在庫</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -13,11 +13,13 @@ body {
   padding: 0;
   background-color: #f9f9f9;
 }
+
 h2 {
   text-align: center;
   font-size: 26px;
   margin-bottom: 15px;
 }
+
 .product {
   border: 1px solid #ccc;
   padding: 14px;
@@ -25,18 +27,17 @@ h2 {
   background: #fff;
   border-radius: 8px;
 }
+
 .top-row {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-}
-.product strong {
-  font-size: 20px;
-  cursor: pointer;
+  align-items: center;
 }
 
-/* ★ 編集＆削除ボタン共通 */
-.edit-btn,
+.product strong {
+  font-size: 20px;
+}
+
 .delete-btn {
   font-size: 12px;
   width: 40px;
@@ -44,21 +45,15 @@ h2 {
   padding: 0;
   border: none;
   border-radius: 6px;
+  background: #777;
   color: white;
   cursor: pointer;
-}
-
-.edit-btn {
-  background: #2196F3;
-}
-
-.delete-btn {
-  background: #777;
 }
 
 .stock-number {
   font-size: 18px;
 }
+
 button {
   font-size: 14px;
   padding: 6px 0;
@@ -69,13 +64,16 @@ button {
   background: #4CAF50;
   color: white;
 }
+
 button.minus {
   background: #f44336;
 }
+
 .zero {
   color: red;
   font-weight: bold;
 }
+
 .toast {
   position: fixed;
   top: 50%;
@@ -90,6 +88,7 @@ button.minus {
   transition: opacity 0.2s ease;
   z-index: 9999;
 }
+
 .toast.show {
   opacity: 1;
 }
@@ -98,19 +97,13 @@ button.minus {
 
 <body>
 
-<h2>バック在庫</h2>
+<h2>家庭在庫</h2>
 
 <div style="background:#fff; padding:12px; margin-bottom:14px; border-radius:8px; border:1px solid #ccc;">
 
   <input type="text" id="new-name"
     placeholder="商品名"
-    style="width:100%; padding:6px; margin-bottom:6px; font-size:14px;">
-
-  <input type="text" id="new-jan"
-    placeholder="JANコード"
-    inputmode="numeric"
-    pattern="[0-9]*"
-    style="width:100%; padding:6px; margin-bottom:8px; font-size:14px;">
+    style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:8px; font-size:16px;">
 
   <button id="add-product" style="width:100%;">
     ＋ 商品を追加
@@ -125,9 +118,9 @@ const supabaseUrl = "https://wonwgpsupqutrujcphwr.supabase.co";
 const supabaseKey = "sb_publishable_6k-VYBGmKA9Jt1uZVlrPiA_QewueM51";
 const mySupabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-async function loadProducts_def() {
+async function loadProducts_home() {
   const { data, error } = await mySupabase
-    .from("products_def")
+    .from("products_home")
     .select("*")
     .order("name");
 
@@ -146,40 +139,11 @@ async function loadProducts_def() {
 
     div.innerHTML = `
       <div class="top-row">
-        <strong class="copy" data-jan="${product.jan}">
-          ${product.name}
-        </strong>
+        <strong>${product.name}</strong>
 
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <button class="edit-btn" data-id="${product.id}">✏️</button>
-          <button class="delete-btn" data-id="${product.id}">🗑</button>
-        </div>
-      </div>
-
-      <div id="edit-${product.id}" style="display:none; margin-top:8px;">
-        <input type="text"
-          id="name-${product.id}"
-          value="${product.name}"
-          placeholder="商品名"
-          style="width:100%; padding:4px; font-size:14px; margin-bottom:4px;">
-
-        <input type="text"
-          id="jan-${product.id}"
-          value="${product.jan}"
-          placeholder="JANコード"
-          inputmode="numeric"
-          pattern="[0-9]*"
-          style="width:100%; padding:4px; font-size:14px; margin-bottom:6px;">
-
-        <div style="display:flex; gap:6px;">
-          <button class="save-btn" data-id="${product.id}" style="flex:1;">
-            保存
-          </button>
-          <button class="cancel-btn" data-id="${product.id}"
-            style="flex:1; background:#aaa;">
-            キャンセル
-          </button>
-        </div>
+        <button class="delete-btn" data-id="${product.id}">
+          🗑
+        </button>
       </div>
 
       在庫:
@@ -189,11 +153,16 @@ async function loadProducts_def() {
 
       更新: ${new Date(product.updated_at).toLocaleString()}<br>
 
-      <div style="display:flex; justify-content: space-between; margin-top:6px;">
-        <button class="plus" data-id="${product.id}" data-stock="${product.stock}">
+      <div style="display:flex; justify-content:space-between; margin-top:6px;">
+        <button class="plus"
+          data-id="${product.id}"
+          data-stock="${product.stock}">
           ＋
         </button>
-        <button class="minus" data-id="${product.id}" data-stock="${product.stock}">
+
+        <button class="minus"
+          data-id="${product.id}"
+          data-stock="${product.stock}">
           −
         </button>
       </div>
@@ -205,42 +174,23 @@ async function loadProducts_def() {
   attachEvents();
 }
 
-/* 以降のJSはそのまま（変更なし） */
-
 function attachEvents() {
-
-  document.querySelectorAll(".cancel-btn").forEach(btn => {
-    btn.onclick = () => {
-      const id = btn.dataset.id;
-      document.getElementById("edit-" + id).style.display = "none";
-    };
-  });
-
-  document.querySelectorAll(".copy").forEach(el => {
-    el.onclick = () => copyJan(el.dataset.jan);
-  });
-
-  document.querySelectorAll(".edit-btn").forEach(btn => {
-    btn.onclick = () => {
-      const id = btn.dataset.id;
-      document.getElementById("edit-" + id).style.display = "block";
-      document.getElementById("name-" + id).focus();
-    };
-  });
-
-  document.querySelectorAll(".save-btn").forEach(btn => {
-    btn.onclick = () => saveEdit(btn.dataset.id);
-  });
 
   document.querySelectorAll(".plus").forEach(btn => {
     btn.onclick = () => {
-      changeStock(btn.dataset.id, Number(btn.dataset.stock) + 1);
+      changeStock(
+        btn.dataset.id,
+        Number(btn.dataset.stock) + 1
+      );
     };
   });
 
   document.querySelectorAll(".minus").forEach(btn => {
     btn.onclick = () => {
-      changeStock(btn.dataset.id, Number(btn.dataset.stock) - 1);
+      changeStock(
+        btn.dataset.id,
+        Number(btn.dataset.stock) - 1
+      );
     };
   });
 
@@ -248,28 +198,17 @@ function attachEvents() {
     btn.onclick = () => deleteProduct(btn.dataset.id);
   });
 
-  const addBtn = document.getElementById("add-product");
-  if (addBtn) {
-    addBtn.onclick = addProduct;
-  }
+  document.getElementById("add-product").onclick = addProduct;
 }
 
-/* 以下は変更なし */
+async function changeStock(id, newStock) {
 
-async function saveEdit(id) {
-  const newName = document.getElementById("name-" + id).value.trim();
-  const newJan  = document.getElementById("jan-" + id).value.trim();
-
-  if (!newName || !newJan) {
-    showToast("商品名とJANを入力してください");
-    return;
-  }
+  if (newStock < 0) newStock = 0;
 
   const { error } = await mySupabase
     .from("products_home")
     .update({
-      name: newName,
-      jan: newJan,
+      stock: newStock,
       updated_at: new Date()
     })
     .eq("id", id);
@@ -279,74 +218,73 @@ async function saveEdit(id) {
     return;
   }
 
-  showToast("商品情報を更新しました");
-  document.getElementById("edit-" + id).style.display = "none";
   loadProducts_home();
-}
-
-async function changeStock(id, newStock) {
-  if (newStock < 0) newStock = 0;
-
-  await mySupabase
-    .from("products_home")
-    .update({ stock: newStock, updated_at: new Date() })
-    .eq("id", id);
-
-  loadProducts_home();
-}
-
-function copyJan(jan) {
-  navigator.clipboard.writeText(jan);
-  showToast("JANコードをコピーしました");
-}
-
-function showToast(message) {
-  const toast = document.createElement("div");
-  toast.className = "toast";
-  toast.innerText = message;
-  document.body.appendChild(toast);
-
-  setTimeout(() => toast.classList.add("show"), 10);
-  setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 200);
-  }, 1200);
 }
 
 async function addProduct() {
-  const name = document.getElementById("new-name").value.trim();
-  const jan = document.getElementById("new-jan").value.trim();
 
-  if (!name || !jan) {
-    showToast("商品名とJANを入力してください");
+  const name =
+    document.getElementById("new-name").value.trim();
+
+  if (!name) {
+    showToast("商品名を入力してください");
     return;
   }
 
   const { error } = await mySupabase
     .from("products_home")
-    .insert([{ name, jan, stock: 0, updated_at: new Date() }]);
+    .insert([{
+      name: name,
+      stock: 0,
+      updated_at: new Date()
+    }]);
 
   if (error) {
-    showToast("追加エラー");
+    showToast("追加エラー: " + error.message);
     return;
   }
 
   showToast("商品を追加しました");
+
   document.getElementById("new-name").value = "";
-  document.getElementById("new-jan").value = "";
+
   loadProducts_home();
 }
 
 async function deleteProduct(id) {
+
   if (!confirm("本当に削除しますか？")) return;
 
-  await mySupabase
+  const { error } = await mySupabase
     .from("products_home")
     .delete()
     .eq("id", id);
 
+  if (error) {
+    showToast("削除エラー");
+    return;
+  }
+
   showToast("削除しました");
   loadProducts_home();
+}
+
+function showToast(message) {
+
+  const toast = document.createElement("div");
+
+  toast.className = "toast";
+  toast.innerText = message;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => toast.classList.add("show"), 10);
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+
+    setTimeout(() => toast.remove(), 200);
+  }, 1200);
 }
 
 loadProducts_home();
