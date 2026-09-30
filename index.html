@@ -118,7 +118,7 @@ button.minus {
 
 </div>
 
-<div id="products_def"></div>
+<div id="products_home"></div>
 
 <script>
 const supabaseUrl = "https://wonwgpsupqutrujcphwr.supabase.co";
@@ -136,7 +136,7 @@ async function loadProducts_def() {
     return;
   }
 
-  const container = document.getElementById("products_def");
+  const container = document.getElementById("products_home");
   container.innerHTML = "";
 
   data.forEach(product => {
@@ -266,7 +266,7 @@ async function saveEdit(id) {
   }
 
   const { error } = await mySupabase
-    .from("products_def")
+    .from("products_home")
     .update({
       name: newName,
       jan: newJan,
@@ -281,18 +281,18 @@ async function saveEdit(id) {
 
   showToast("商品情報を更新しました");
   document.getElementById("edit-" + id).style.display = "none";
-  loadProducts_def();
+  loadProducts_home();
 }
 
 async function changeStock(id, newStock) {
   if (newStock < 0) newStock = 0;
 
   await mySupabase
-    .from("products_def")
+    .from("products_home")
     .update({ stock: newStock, updated_at: new Date() })
     .eq("id", id);
 
-  loadProducts_def();
+  loadProducts_home();
 }
 
 function copyJan(jan) {
@@ -323,7 +323,7 @@ async function addProduct() {
   }
 
   const { error } = await mySupabase
-    .from("products_def")
+    .from("products_home")
     .insert([{ name, jan, stock: 0, updated_at: new Date() }]);
 
   if (error) {
@@ -334,22 +334,22 @@ async function addProduct() {
   showToast("商品を追加しました");
   document.getElementById("new-name").value = "";
   document.getElementById("new-jan").value = "";
-  loadProducts_def();
+  loadProducts_home();
 }
 
 async function deleteProduct(id) {
   if (!confirm("本当に削除しますか？")) return;
 
   await mySupabase
-    .from("products_def")
+    .from("products_home")
     .delete()
     .eq("id", id);
 
   showToast("削除しました");
-  loadProducts_def();
+  loadProducts_home();
 }
 
-loadProducts_def();
+loadProducts_home();
 </script>
 
 </body>
