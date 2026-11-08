@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>家庭在庫</title>
+
+
+<style>
+body {
+  font-family: sans-serif;
+  margin: 8px;
+  padding: 0;
+  background-color: #f9f9f9;
+}
+
+h2 {
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 10px;
+}
+
+.shopping-link {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.shopping-link a {
+  display: inline-block;
+  padding: 10px 16px;
+  background: #2196F3;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.product {
+  border: 1px solid #ccc;
+  padding: 14px;
+  margin-bottom: 12px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.product strong {
+  font-size: 20px;
+}
+
+.delete-btn {
+  font-size: 12px;
+  width: 40px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: #777;
+  color: white;
+  cursor: pointer;
+}
+
+.stock-number {
+  font-size: 18px;
+}
+
+button {
+  font-size: 14px;
+  padding: 6px 0;
+  margin: 4px 2px;
+  width: 45%;
+  border-radius: 5px;
+  border: none;
+  background: #4CAF50;
+  color: white;
+}
+
+button.minus {
+  background: #f44336;
+}
+
+.zero {
+  color: red;
+  font-weight: bold;
+}
+
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 14px 22px;
+  border-radius: 12px;
+  font-size: 16px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+}
+</style>
+</head>
+
+<body>
+
+<h2>家庭在庫</h2>
+
+<div class="shopping-link">
+  <a href="shopping.html">🛒 買い物リストを見る</a>
+</div>
+
+<div style="background:#fff; padding:12px; margin-bottom:14px; border-radius:8px; border:1px solid #ccc;">
+
+  <input type="text" id="new-name"
+    placeholder="商品名"
+    style="width:100%; box-sizing:border-box; padding:8px; margin-bottom:8px; font-size:16px;">
+
+  <button id="add-product" style="width:100%;">
+    ＋ 商品を追加
+  </button>
+
+</div>
+
+<div id="products_home"></div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@neondatabase/neon-js";
+
+// 家族にログイン操作を求めず、Neon Auth が短期の匿名 JWT を取得する
+const neon = createClient({
+  auth: {
+    url: "https://ep-wandering-haze-aogpetf7.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth",
+    allowAnonymous: true
+  },
+  dataApi: {
+    url: "https://ep-wandering-haze-aogpetf7.apirest.c-2.ap-southeast-1.aws.neon.tech/neondb/rest/v1"
+  }
+});
+
+function apiList() {
+  return neon.from("products_home").select("*").order("name");
+}
+function apiUpdate(id, values) {
+  return neon.from("products_home").update(values).eq("id", id);
+}
+function apiInsert(values) {
+  return neon.from("products_home").insert(values);
+}
+function apiDelete(id) {
+  return neon.from("products_home").delete().eq("id", id);
+}
+
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function loadProducts_home() {
+  let data, error;
+  try { ({ data, error } = await apiList()); }
+  catch (err) { alert("Neon接続エラー: " + err.message); return; }
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  const container = document.getElementById("products_home");
+  container.innerHTML = "";
+
+  data.forEach(product => {
+
+    const div = document.createElement("div");
+    div.className = "product";
+
+    div.innerHTML = `
+      <div class="top-row">
+        <strong>${escapeHtml(product.name)}</strong>
+
+        <button class="delete-btn" data-id="${product.id}">
+          🗑
+        </button>
+      </div>
+
+      在庫:
+      <span class="stock-number ${product.stock === 0 ? 'zero' : ''}">
+        ${product.stock}
+      </span><br>
+
+      更新: ${new Date(product.updated_at).toLocaleString()}<br>
+
+      <div style="display:flex; justify-content:space-between; margin-top:6px;">
+        <button class="minus"
+          data-id="${product.id}"
+          data-stock="${product.stock}">
+          −
+        </button>
+
+        <button class="plus"
+          data-id="${product.id}"
+          data-stock="${product.stock}">
+          ＋
+        </button>
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
+
+  attachEvents();
+}
+
+function attachEvents() {
+
+  document.querySelectorAll(".plus").forEach(btn => {
+    btn.onclick = () => {
+      changeStock(
+        btn.dataset.id,
+        Number(btn.dataset.stock) + 1
+      );
+    };
+  });
+
+  document.querySelectorAll(".minus").forEach(btn => {
+    btn.onclick = () => {
+      changeStock(
+        btn.dataset.id,
+        Number(btn.dataset.stock) - 1
+      );
+    };
+  });
+
+  document.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.onclick = () => deleteProduct(btn.dataset.id);
+  });
+
+  document.getElementById("add-product").onclick = addProduct;
+}
+
+async function changeStock(id, newStock) {
+
+  if (newStock < 0) newStock = 0;
+
+  const { error } = await apiUpdate(id, {
+      stock: newStock,
+      updated_at: new Date()
+    });
+
+  if (error) {
+    showToast("更新エラー: " + error.message);
+    return;
+  }
+
+  loadProducts_home();
+}
+
+async function addProduct() {
+
+  const name =
+    document.getElementById("new-name").value.trim();
+
+  if (!name) {
+    showToast("商品名を入力してください");
+    return;
+  }
+
+  const { error } = await apiInsert([{
+      name: name,
+      stock: 0,
+      updated_at: new Date()
+    }]);
+
+  if (error) {
+    showToast("追加エラー: " + error.message);
+    return;
+  }
+
+  showToast("商品を追加しました");
+
+  document.getElementById("new-name").value = "";
+
+  loadProducts_home();
+}
+
+async function deleteProduct(id) {
+
+  if (!confirm("本当に削除しますか？")) return;
+
+  const { error } = await apiDelete(id);
+
+  if (error) {
+    showToast("削除エラー: " + error.message);
+    return;
+  }
+
+  showToast("削除しました");
+  loadProducts_home();
+}
+
+function showToast(message) {
+
+  const toast = document.createElement("div");
+
+  toast.className = "toast";
+  toast.innerText = message;
+
+  document.body.appendChild(toast);
+
+  setTimeout(() => toast.classList.add("show"), 10);
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+
+    setTimeout(() => toast.remove(), 200);
+  }, 1200);
+}
+
+loadProducts_home();
+</script>
+
+</body>
+</html>
